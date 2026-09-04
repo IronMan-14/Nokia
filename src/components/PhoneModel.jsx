@@ -49,8 +49,24 @@ function makeScreenTexture(variant, accent) {
   ctx.fillStyle = 'rgba(255,255,255,0.92)'
   ctx.font = '500 40px Inter, sans-serif'
   ctx.fillText('9:41', 88, 128)
-  const right = variant === 'aura' ? 'PRIVATE' : 'SIM1 · SIM2'
-  ctx.fillText(right, w - 100 - ctx.measureText(right).width, 128)
+  // signal bars + battery glyph
+  const bx = w - 250
+  for (let i = 0; i < 4; i++) {
+    const bh = 12 + i * 9
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'
+    ctx.fillRect(bx + i * 16, 128 - bh, 10, bh)
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+  ctx.lineWidth = 4
+  ctx.beginPath(); ctx.roundRect(bx + 84, 96, 62, 34, 8); ctx.stroke()
+  ctx.fillStyle = accent
+  ctx.beginPath(); ctx.roundRect(bx + 89, 101, 46, 24, 5); ctx.fill()
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'
+  ctx.beginPath(); ctx.roundRect(bx + 150, 106, 7, 14, 3); ctx.fill()
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'
+  ctx.font = '500 30px Inter, sans-serif'
+  const tag = variant === 'aura' ? 'PRIVATE' : 'SIM1·SIM2'
+  ctx.fillText(tag, bx - 20 - ctx.measureText(tag).width, 126)
 
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '700 250px "Space Grotesk", sans-serif'
@@ -75,12 +91,22 @@ function makeScreenTexture(variant, accent) {
   ctx.beginPath(); ctx.roundRect(620, 1360, 180, 16, 8); ctx.fill()
   ctx.globalAlpha = 1
 
+  const labels = ['Vault', 'Maps', 'Msgs', 'Cam', 'Pay', 'Health', 'Files', 'More']
   for (let i = 0; i < 8; i++) {
     const x = 110 + (i % 4) * 216
     const y = 1560 + Math.floor(i / 4) * 216
-    ctx.beginPath(); ctx.roundRect(x, y, 156, 156, 44)
-    ctx.fillStyle = i % 3 === 0 ? accent + '55' : 'rgba(255,255,255,0.12)'
-    ctx.fill()
+    const g2 = ctx.createLinearGradient(x, y, x, y + 156)
+    if (i % 3 === 0) { g2.addColorStop(0, accent + '77'); g2.addColorStop(1, accent + '22') }
+    else { g2.addColorStop(0, 'rgba(255,255,255,0.17)'); g2.addColorStop(1, 'rgba(255,255,255,0.07)') }
+    ctx.beginPath(); ctx.roundRect(x, y, 156, 156, 44); ctx.fillStyle = g2; ctx.fill()
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 2; ctx.stroke()
+    // glyph
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    ctx.beginPath(); ctx.roundRect(x + 52, y + 52, 52, 52, 14); ctx.fill()
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.font = '400 24px Inter, sans-serif'
+    const lw = ctx.measureText(labels[i]).width
+    ctx.fillText(labels[i], x + 78 - lw / 2, y + 196)
   }
 
   ctx.fillStyle = 'rgba(255,255,255,0.65)'
@@ -232,158 +258,195 @@ export default function PhoneModel({
   })
 
   const isAura = variant === 'aura'
-  // Real-world-ish proportions: ~71.5 x 158 x 8.2mm scaled to units.
+  // ~71.5 x 158 x 8.2mm scaled to scene units.
   const W = 1.0, H = 2.14, D = 0.105
+  const hi = quality !== 'low'
+  const seg = hi ? 8 : 3
 
   return (
     <group ref={group} scale={scale} {...props} dispose={null}>
-      {/* ---- back shell ---- */}
+      {/* ================= BACK SHELL — fully opaque ================= */}
       <RoundedBox
         args={[W, H, D]}
         radius={isAura ? 0.13 : 0.1}
-        smoothness={quality === 'low' ? 3 : 8}
+        smoothness={seg}
         castShadow={quality === 'high'}
         receiveShadow={quality === 'high'}
       >
         <meshPhysicalMaterial
           ref={bodyMat}
           color={color}
-          metalness={isAura ? 0.1 : 0.04}
-          roughness={isAura ? 0.5 : 0.92}
-          clearcoat={isAura ? 0.85 : 0.04}
-          clearcoatRoughness={isAura ? 0.28 : 0.9}
+          transparent={false}
+          opacity={1}
+          depthWrite
+          metalness={isAura ? 0.25 : 0.08}
+          roughness={isAura ? 0.38 : 0.88}
+          clearcoat={isAura ? 1 : 0.05}
+          clearcoatRoughness={isAura ? 0.12 : 0.85}
+          reflectivity={isAura ? 0.6 : 0.2}
           bumpMap={ruggedTex || undefined}
-          bumpScale={isAura ? 0 : 0.04}
-          envMapIntensity={isAura ? 1.1 : 0.5}
+          bumpScale={isAura ? 0 : 0.045}
+          envMapIntensity={isAura ? 1.0 : 0.45}
         />
       </RoundedBox>
 
-      {/* ---- polished chamfer rail: slightly larger, thinner, high metalness.
-             This thin bright edge is what sells "machined metal" in reflections. ---- */}
-      <RoundedBox
-        args={[W + 0.028, H + 0.028, D * 0.82]}
-        radius={isAura ? 0.142 : 0.112}
-        smoothness={quality === 'low' ? 3 : 7}
-      >
-        <meshStandardMaterial
-          color={isAura ? '#D2D7DE' : '#767F8A'}
-          metalness={1}
-          roughness={isAura ? 0.14 : 0.42}
-          envMapIntensity={1.6}
-        />
-      </RoundedBox>
+      {/* Side rails, drawn as four separate solid bars rather than one big box
+          enclosing the body — an enclosing shell read as a translucent slab. */}
+      {[
+        { k: 'l', args: [0.022, H - 0.16, D * 0.99], pos: [-W / 2 - 0.004, 0, 0] },
+        { k: 'r', args: [0.022, H - 0.16, D * 0.99], pos: [W / 2 + 0.004, 0, 0] },
+        { k: 't', args: [W - 0.14, 0.022, D * 0.99], pos: [0, H / 2 + 0.004, 0] },
+        { k: 'b', args: [W - 0.14, 0.022, D * 0.99], pos: [0, -H / 2 - 0.004, 0] },
+      ].map((r) => (
+        <mesh key={r.k} position={r.pos} castShadow={quality === 'high'}>
+          <boxGeometry args={r.args} />
+          <meshStandardMaterial
+            color={isAura ? '#C9CFD7' : '#6E7681'}
+            metalness={1}
+            roughness={isAura ? 0.17 : 0.45}
+            envMapIntensity={1.5}
+          />
+        </mesh>
+      ))}
 
-      {/* antenna bands breaking up the frame */}
-      {[0.72, -0.72].map((y) => (
+      {/* Rounded corner posts so the rail wraps continuously */}
+      {[[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([sx, sy]) => (
+        <mesh key={`c${sx}${sy}`} position={[sx * (W / 2 - 0.06), sy * (H / 2 - 0.06), 0]}
+          rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.068, 0.068, D * 0.99, hi ? 24 : 10, 1, false, 0, Math.PI / 2]} />
+          <meshStandardMaterial color={isAura ? '#C9CFD7' : '#6E7681'} metalness={1}
+            roughness={isAura ? 0.17 : 0.45} envMapIntensity={1.5} />
+        </mesh>
+      ))}
+
+      {/* Antenna bands */}
+      {[0.74, -0.74].map((y) => (
         <mesh key={y} position={[0, y, 0]}>
-          <boxGeometry args={[W + 0.031, 0.016, D * 0.83]} />
-          <meshStandardMaterial color={isAura ? '#9BA3AE' : '#4A525C'} metalness={0.6} roughness={0.6} />
+          <boxGeometry args={[W + 0.012, 0.014, D * 1.0]} />
+          <meshStandardMaterial color={isAura ? '#8E96A2' : '#3F4650'} metalness={0.5} roughness={0.65} />
         </mesh>
       ))}
 
       {/* Terra bumper corners */}
       {!isAura && [[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([sx, sy], i) => (
-        <RoundedBox key={i} args={[0.28, 0.32, D + 0.075]} radius={0.065} smoothness={4}
+        <RoundedBox key={i} args={[0.3, 0.34, D + 0.07]} radius={0.07} smoothness={hi ? 5 : 3}
           position={[sx * (W / 2 - 0.05), sy * (H / 2 - 0.07), 0]}>
-          <meshStandardMaterial color="#1B2027" metalness={0.08} roughness={0.98}
-            bumpMap={ruggedTex || undefined} bumpScale={0.03} />
+          <meshStandardMaterial color="#171C23" metalness={0.05} roughness={1}
+            bumpMap={ruggedTex || undefined} bumpScale={0.035} />
         </RoundedBox>
       ))}
 
-      {/* ---- display stack: black substrate + emissive UI, inset under glass ---- */}
-      <mesh position={[0, 0, D / 2 + 0.0015]}>
-        <planeGeometry args={[W - 0.03, H - 0.035]} />
-        <meshBasicMaterial color="#000000" toneMapped={false} />
+      {/* ================= DISPLAY — opaque, no blending ================= */}
+      {/* black bezel substrate */}
+      <mesh position={[0, 0, D / 2 + 0.0012]}>
+        <planeGeometry args={[W - 0.022, H - 0.026]} />
+        <meshBasicMaterial color="#020306" toneMapped={false} />
       </mesh>
-      <mesh position={[0, 0, D / 2 + 0.0035]}>
-        <planeGeometry args={[W - 0.032, H - 0.037]} />
-        <meshBasicMaterial map={screenTex} toneMapped={false} transparent />
-      </mesh>
-      {/* Cover glass. Deliberately NOT using transmission: it requires its own
-          render pass and occludes the emissive display behind it, which washed
-          the screen out to flat grey. A thin additive sheen reads as glass and
-          keeps the UI visible. */}
-      <mesh position={[0, 0, D / 2 + 0.007]} renderOrder={2}>
-        <planeGeometry args={[W - 0.03, H - 0.035]} />
-        <meshBasicMaterial
-          color="#9FC4FF"
-          transparent
-          opacity={0.05}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          toneMapped={false}
-        />
+      {/* emissive UI — opaque so nothing behind it can bleed through */}
+      <mesh position={[0, 0, D / 2 + 0.0026]}>
+        <planeGeometry args={[W - 0.03, H - 0.034]} />
+        <meshBasicMaterial map={screenTex} toneMapped={false} transparent={false} depthWrite />
       </mesh>
 
-      {/* ---- camera plateau (raised island) + modules ---- */}
-      <group position={[-W / 2 + 0.3, H / 2 - 0.33, -D / 2]}>
-        <RoundedBox args={[0.5, isAura ? 0.5 : 0.42, 0.05]} radius={isAura ? 0.15 : 0.095}
-          smoothness={quality === 'low' ? 3 : 6} position={[0, 0, -0.022]}>
-          <meshPhysicalMaterial color={isAura ? '#171C25' : '#252A31'} metalness={0.85}
-            roughness={0.3} clearcoat={0.6} envMapIntensity={1.3} />
+      {/* ================= CAMERA PLATEAU ================= */}
+      <group position={[-W / 2 + 0.3, H / 2 - 0.34, -D / 2]}>
+        <RoundedBox args={[0.52, isAura ? 0.52 : 0.44, 0.055]} radius={isAura ? 0.155 : 0.1}
+          smoothness={hi ? 6 : 3} position={[0, 0, -0.024]} castShadow={quality === 'high'}>
+          <meshPhysicalMaterial color={isAura ? '#12161D' : '#1F242B'} metalness={0.7}
+            roughness={0.28} clearcoat={0.8} clearcoatRoughness={0.1} envMapIntensity={1.2} />
         </RoundedBox>
 
-        {(isAura ? [[-0.105, 0.105], [0.105, 0.105], [-0.105, -0.105]] : [[-0.095, 0.055], [0.095, 0.055]]).map(([x, y], i) => (
-          <group key={i} position={[x, y, -0.05]}>
-            {/* knurled metal barrel */}
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.082, 0.088, 0.036, 32]} />
-              <meshStandardMaterial color="#A7AEB8" metalness={1} roughness={0.18} envMapIntensity={1.8} />
+        {(isAura
+          ? [[-0.105, 0.105, 0.088], [0.105, 0.105, 0.078], [-0.105, -0.105, 0.078]]
+          : [[-0.095, 0.055, 0.084], [0.095, 0.055, 0.072]]
+        ).map(([x, y, r], i) => (
+          <group key={i} position={[x, y, -0.052]}>
+            {/* outer machined ring */}
+            <mesh rotation={[Math.PI / 2, 0, 0]} castShadow={quality === 'high'}>
+              <cylinderGeometry args={[r, r + 0.006, 0.042, hi ? 40 : 14]} />
+              <meshStandardMaterial color="#B6BDC7" metalness={1} roughness={0.14} envMapIntensity={2} />
             </mesh>
-            {/* recessed black ring */}
-            <mesh position={[0, 0, -0.016]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.066, 0.066, 0.012, 32]} />
-              <meshStandardMaterial color="#05070B" metalness={0.4} roughness={0.5} />
+            {/* inner black barrel */}
+            <mesh position={[0, 0, -0.014]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[r * 0.78, r * 0.78, 0.03, hi ? 32 : 12]} />
+              <meshStandardMaterial color="#04060A" metalness={0.3} roughness={0.65} />
             </mesh>
-            {/* domed glass element with a coloured coating flare */}
-            <mesh position={[0, 0, -0.026]}>
-              <sphereGeometry args={[0.055, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-              <meshPhysicalMaterial color="#04060C" metalness={0.9} roughness={0.04}
+            {/* glass element */}
+            <mesh position={[0, 0, -0.03]}>
+              <sphereGeometry args={[r * 0.66, hi ? 28 : 12, hi ? 18 : 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+              <meshPhysicalMaterial color="#03050A" metalness={0.95} roughness={0.03}
                 clearcoat={1} clearcoatRoughness={0.02}
-                emissive={accent} emissiveIntensity={0.25} envMapIntensity={2.2} />
+                emissive={accent} emissiveIntensity={0.3} envMapIntensity={2.4} />
+            </mesh>
+            {/* aperture catchlight */}
+            <mesh position={[r * 0.2, r * 0.2, -0.038]}>
+              <circleGeometry args={[r * 0.16, hi ? 20 : 8]} />
+              <meshBasicMaterial color="#EAF4FF" toneMapped={false} />
             </mesh>
           </group>
         ))}
 
-        <mesh position={[isAura ? 0.105 : 0, isAura ? -0.105 : -0.09, -0.048]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.03, 0.03, 0.014, 16]} />
-          <meshStandardMaterial color="#FFF6DC" emissive="#FFE9B0" emissiveIntensity={0.7} />
+        {/* LED flash + laser AF */}
+        <mesh position={[isAura ? 0.105 : 0, isAura ? -0.105 : -0.09, -0.05]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.032, 0.032, 0.016, hi ? 20 : 8]} />
+          <meshStandardMaterial color="#FFF7E2" emissive="#FFE7A8" emissiveIntensity={0.8} />
+        </mesh>
+        {isAura && (
+          <mesh position={[0.105, -0.105, -0.05]} rotation={[Math.PI / 2, 0, 0]} visible={false} />
+        )}
+        <mesh position={[isAura ? 0.16 : 0.13, isAura ? 0.02 : -0.09, -0.05]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.014, 0.014, 0.016, hi ? 14 : 6]} />
+          <meshStandardMaterial color="#0A1520" metalness={0.4} roughness={0.4}
+            emissive="#3DF0FF" emissiveIntensity={0.25} />
         </mesh>
       </group>
 
-      {/* ---- side keys, inset into the rail ---- */}
-      <mesh position={[W / 2 + 0.012, 0.36, 0]}>
-        <boxGeometry args={[0.016, 0.28, D * 0.42]} />
-        <meshStandardMaterial color={isAura ? '#C2C8D0' : '#5E666F'} metalness={1} roughness={0.25} />
+      {/* ================= SIDE KEYS ================= */}
+      <mesh position={[W / 2 + 0.014, 0.36, 0]} castShadow={quality === 'high'}>
+        <boxGeometry args={[0.014, 0.26, D * 0.5]} />
+        <meshStandardMaterial color={isAura ? '#BFC6CF' : '#5A626B'} metalness={1} roughness={0.22} />
       </mesh>
-      <mesh position={[W / 2 + 0.012, 0.06, 0]}>
-        <boxGeometry args={[0.016, 0.14, D * 0.42]} />
-        <meshStandardMaterial color={isAura ? '#C2C8D0' : '#5E666F'} metalness={1} roughness={0.25} />
+      <mesh position={[W / 2 + 0.014, 0.07, 0]} castShadow={quality === 'high'}>
+        <boxGeometry args={[0.014, 0.13, D * 0.5]} />
+        <meshStandardMaterial color={isAura ? '#BFC6CF' : '#5A626B'} metalness={1} roughness={0.22} />
       </mesh>
-      {/* privacy key (Aura) / PTT key (Terra) */}
-      <mesh position={[W / 2 + 0.013, -0.24, 0]}>
-        <boxGeometry args={[0.018, 0.16, D * 0.44]} />
-        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.6}
-          metalness={0.5} roughness={0.35} />
+      {/* privacy / PTT key */}
+      <mesh position={[W / 2 + 0.015, -0.26, 0]} castShadow={quality === 'high'}>
+        <boxGeometry args={[0.016, 0.15, D * 0.52]} />
+        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.45}
+          metalness={0.4} roughness={0.3} />
       </mesh>
 
-      {/* ---- speaker grille + port on the bottom rail ---- */}
-      {Array.from({ length: 6 }).map((_, i) => (
-        <mesh key={i} position={[0.16 + i * 0.035, -H / 2 - 0.004, 0]} rotation={[0, 0, 0]}>
-          <cylinderGeometry args={[0.008, 0.008, 0.02, 8]} />
-          <meshStandardMaterial color="#05070B" metalness={0.3} roughness={0.9} />
+      {/* ================= BOTTOM EDGE DETAIL ================= */}
+      <mesh position={[0, -H / 2 - 0.006, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.016, 0.048, 4, hi ? 14 : 6]} />
+        <meshStandardMaterial color="#04060A" metalness={0.55} roughness={0.55} />
+      </mesh>
+      {Array.from({ length: hi ? 7 : 3 }).map((_, i) => (
+        <mesh key={i} position={[0.15 + i * 0.032, -H / 2 - 0.006, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.007, 0.007, 0.016, 8]} />
+          <meshStandardMaterial color="#04060A" metalness={0.2} roughness={0.95} />
         </mesh>
       ))}
-      <mesh position={[0, -H / 2 - 0.004, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <capsuleGeometry args={[0.018, 0.05, 4, 12]} />
-        <meshStandardMaterial color="#05070B" metalness={0.5} roughness={0.7} />
-      </mesh>
+      {Array.from({ length: hi ? 7 : 3 }).map((_, i) => (
+        <mesh key={`m${i}`} position={[-0.15 - i * 0.032, -H / 2 - 0.006, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.007, 0.007, 0.016, 8]} />
+          <meshStandardMaterial color="#04060A" metalness={0.2} roughness={0.95} />
+        </mesh>
+      ))}
 
-      {/* ---- engraved wordmark ---- */}
-      <mesh position={[0, -H / 2 + 0.3, -D / 2 - 0.0015]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[0.4, 0.026]} />
-        <meshStandardMaterial color={isAura ? '#79818E' : '#AEB5BE'} metalness={1} roughness={0.45} />
+      {/* ================= BACK BRANDING ================= */}
+      <mesh position={[0, -H / 2 + 0.3, -D / 2 - 0.0012]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[0.38, 0.024]} />
+        <meshStandardMaterial color={isAura ? '#6E7682' : '#A8B0B9'} metalness={1} roughness={0.4} />
       </mesh>
+      {/* subtle NFC / coil ring hint on the back */}
+      {isAura && (
+        <mesh position={[0, 0.12, -D / 2 - 0.001]} rotation={[0, Math.PI, 0]}>
+          <ringGeometry args={[0.2, 0.207, hi ? 48 : 16]} />
+          <meshStandardMaterial color="#FFFFFF" transparent opacity={0.05} metalness={0.8} roughness={0.5} />
+        </mesh>
+      )}
     </group>
   )
 }

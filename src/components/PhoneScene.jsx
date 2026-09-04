@@ -1,5 +1,6 @@
 import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
+import * as THREE from 'three'
 import { Environment, Lightformer, ContactShadows, Float, AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
 import PhoneModel from './PhoneModel.jsx'
 import { getDeviceTier, TIER_SETTINGS, useReducedMotion } from '../lib/hooks.js'
@@ -103,15 +104,24 @@ export default function PhoneScene({
           eventPrefix="client"
           dpr={dprCap}
           shadows={q.shadows}
-          gl={{ antialias: q.aa, powerPreference: 'high-performance', alpha: true }}
+          gl={{
+            antialias: q.aa,
+            powerPreference: 'high-performance',
+            alpha: true,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            toneMapping: THREE.ACESFilmicToneMapping,
+            outputColorSpace: THREE.SRGBColorSpace,
+          }}
           camera={{ position: [0, 0, cameraZ], fov: 30 }}
           onCreated={() => requestAnimationFrame(() => setReady(true))}
         >
           <PerformanceMonitor onDecline={() => setDprCap([1, 1])} />
           <AdaptiveDpr pixelated={false} />
-          <ambientLight intensity={0.35} />
-          <directionalLight position={[4, 6, 5]} intensity={1.5} castShadow={q.shadows} />
-          <directionalLight position={[-5, 2, -4]} intensity={0.8} color={accent} />
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[4, 6, 5]} intensity={2.4} castShadow={q.shadows} />
+          <directionalLight position={[-5, 2, -4]} intensity={1.2} color={accent} />
+          <spotLight position={[0, 4, 3]} angle={0.6} penumbra={1} intensity={18} color="#ffffff" />
           <pointLight position={[0, -3, 2]} intensity={12} color="#124191" distance={9} />
           <Suspense fallback={null}>
             <Float
