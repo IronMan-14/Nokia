@@ -64,22 +64,23 @@ function FeaturePinned({ device, finish }) {
       <div className="reel-stage relative h-[100svh] w-full overflow-hidden">
         <div aria-hidden className="circuit-bg absolute inset-0 opacity-60" />
 
-        <div className="pointer-events-none absolute left-1/2 top-10 z-20 -translate-x-1/2 text-center">
+        <div className="pointer-events-none absolute left-1/2 top-8 z-30 -translate-x-1/2 text-center">
           <p className="eyebrow">Feature reel</p>
           <h2 className="h-display mt-2 text-2xl sm:text-3xl">Engineered in the open</h2>
         </div>
 
         {/* 3D stage + projected hotspot markers */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-x-0 bottom-0 top-24">
           <PhoneScene
             variant={device.id}
             color={finish.color}
             accent={device.accent}
             autoRotate={false}
+            draggable={false}
             rotationTargetRef={rotation}
             hotspots={HOTSPOTS}
             onHotspotFrame={setMarkers}
-            cameraZ={4}
+            cameraZ={6.8}
             posterLabel={device.name}
           />
           {markers.map((m) => {
@@ -123,7 +124,7 @@ function FeaturePinned({ device, finish }) {
         </div>
 
         {/* pinned callout */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-full max-w-md items-center px-6 lg:px-16">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-20 flex w-full max-w-md items-center px-6 lg:px-16">
           <AnimatePresence mode="wait">
             <motion.div
               key={hs.id}

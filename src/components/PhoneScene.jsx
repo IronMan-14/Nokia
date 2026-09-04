@@ -1,4 +1,4 @@
-import { Suspense, useState, useRef, useEffect } from 'react'
+import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Environment, Lightformer, ContactShadows, Float, AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
 import PhoneModel from './PhoneModel.jsx'
@@ -13,10 +13,11 @@ export default function PhoneScene({
   color,
   accent,
   autoRotate = true,
+  draggable = true,
   rotationTargetRef,
   hotspots = [],
   onHotspotFrame,
-  cameraZ = 4.2,
+  cameraZ = 6.4,
   className = '',
   posterLabel = 'Nokia concept device',
 }) {
@@ -43,6 +44,37 @@ export default function PhoneScene({
 
   const [dprCap, setDprCap] = useState(q.dpr)
 
+  // Drag is handled by a plain DOM surface sized to the phone, NOT the canvas.
+  // touch-action:pan-y on it means vertical swipes still scroll the page on
+  // mobile while horizontal drags spin the device.
+  const dragRef = useRef({ active: false, lastX: 0, lastY: 0, velX: 0, velY: 0, x: 0, y: 0, touched: false })
+
+  const onDown = useCallback((e) => {
+    if (!draggable) return
+    const d = dragRef.current
+    d.active = true; d.touched = true
+    d.lastX = e.clientX; d.lastY = e.clientY
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }, [draggable])
+
+  const onMove = useCallback((e) => {
+    const d = dragRef.current
+    if (!d.active) return
+    const dx = e.clientX - d.lastX
+    const dy = e.clientY - d.lastY
+    d.lastX = e.clientX; d.lastY = e.clientY
+    d.velX = dx * 0.006
+    d.velY = dy * 0.004
+    d.x += d.velX
+    d.y = Math.max(-0.55, Math.min(0.55, d.y + d.velY))
+  }, [])
+
+  const onUp = useCallback((e) => {
+    const d = dragRef.current
+    d.active = false
+    e.currentTarget.releasePointerCapture?.(e.pointerId)
+  }, [])
+
   return (
     <div ref={wrap} className={`relative h-full w-full ${className}`}>
       {/* volumetric glow behind the phone */}
@@ -64,10 +96,15 @@ export default function PhoneScene({
       {mounted && (
         <Canvas
           className="!absolute inset-0"
+          // The canvas covers a huge area; letting it capture pointer events made
+          // the page feel unscrollable. Events pass through except on the phone,
+          // which re-enables them on its own group.
+          style={{ pointerEvents: 'none', touchAction: 'pan-y' }}
+          eventPrefix="client"
           dpr={dprCap}
           shadows={q.shadows}
           gl={{ antialias: q.aa, powerPreference: 'high-performance', alpha: true }}
-          camera={{ position: [0, 0, cameraZ], fov: 32 }}
+          camera={{ position: [0, 0, cameraZ], fov: 30 }}
           onCreated={() => requestAnimationFrame(() => setReady(true))}
         >
           <PerformanceMonitor onDecline={() => setDprCap([1, 1])} />
@@ -88,6 +125,7 @@ export default function PhoneScene({
                 accent={accent}
                 autoRotate={autoRotate && !reduced}
                 rotationTargetRef={rotationTargetRef}
+                externalDragRef={dragRef}
                 hotspots={hotspots}
                 onHotspotFrame={onHotspotFrame}
                 quality={tier}
@@ -112,6 +150,20 @@ export default function PhoneScene({
             <ContactShadows position={[0, -1.5, 0]} opacity={0.5} scale={7} blur={2.6} far={3} />
           )}
         </Canvas>
+      )}
+
+      {/* Drag surface: only this region (roughly the phone) receives pointer
+          events, so the rest of the hero scrolls normally. */}
+      {mounted && draggable && (
+        <div
+          className="absolute left-1/2 top-1/2 h-[70%] w-[min(38%,320px)] -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing"
+          style={{ touchAction: 'pan-y' }}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          aria-hidden
+        />
       )}
     </div>
   )

@@ -143,6 +143,7 @@ export default function PhoneModel({
   accent = '#3DF0FF',
   autoRotate = true,
   draggable = true,
+  externalDragRef,
   scale = 1,
   rotationTargetRef,   // optional external { current: {x, y} } drive (scroll)
   onHotspotFrame,      // optional per-frame callback for projecting hotspots
@@ -165,49 +166,10 @@ export default function PhoneModel({
 
   useEffect(() => () => { screenTex?.dispose(); ruggedTex?.dispose() }, [screenTex, ruggedTex])
 
-  /* ------------------------------ drag ------------------------------ */
-  useEffect(() => {
-    if (!draggable) return
-    const el = gl.domElement
-    const down = (e) => {
-      drag.current.active = true
-      drag.current.touched = true
-      drag.current.lastX = e.clientX
-      drag.current.lastY = e.clientY
-      el.setPointerCapture?.(e.pointerId)
-      el.style.cursor = 'grabbing'
-    }
-    const move = (e) => {
-      if (!drag.current.active) return
-      const dx = e.clientX - drag.current.lastX
-      const dy = e.clientY - drag.current.lastY
-      drag.current.lastX = e.clientX
-      drag.current.lastY = e.clientY
-      drag.current.velX = dx * 0.006
-      drag.current.velY = dy * 0.004
-      drag.current.x += drag.current.velX
-      drag.current.y += drag.current.velY
-      drag.current.y = THREE.MathUtils.clamp(drag.current.y, -0.55, 0.55)
-    }
-    const up = (e) => {
-      drag.current.active = false
-      el.releasePointerCapture?.(e.pointerId)
-      el.style.cursor = 'grab'
-    }
-    el.style.cursor = 'grab'
-    el.style.touchAction = 'pan-y'
-    el.addEventListener('pointerdown', down)
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
-    window.addEventListener('pointercancel', up)
-    return () => {
-      el.removeEventListener('pointerdown', down)
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-      window.removeEventListener('pointercancel', up)
-      el.style.cursor = ''
-    }
-  }, [gl, draggable])
+  // Drag state is owned by PhoneScene's DOM drag-surface (see dragRef) so the
+  // WebGL canvas itself never needs to capture pointer events and can never
+  // block page scrolling. Falls back to local state if no ref is supplied.
+  const activeDrag = externalDragRef || drag
 
   const projected = useRef(new THREE.Vector3())
 
@@ -216,19 +178,20 @@ export default function PhoneModel({
     if (!group.current) return
 
     // inertia
-    if (!drag.current.active) {
-      drag.current.velX *= 0.94
-      drag.current.velY *= 0.94
-      drag.current.x += drag.current.velX
-      drag.current.y += drag.current.velY
+    const dr = activeDrag.current
+    if (!dr.active) {
+      dr.velX *= 0.94
+      dr.velY *= 0.94
+      dr.x += dr.velX
+      dr.y += dr.velY
     }
-    if (autoRotate && !drag.current.touched) spin.current += d * 0.28
+    if (autoRotate && !dr.touched) spin.current += d * 0.28
 
     const extY = rotationTargetRef?.current?.y ?? 0
     const extX = rotationTargetRef?.current?.x ?? 0
 
-    const targetY = spin.current + drag.current.x + extY
-    const targetX = drag.current.y + extX + Math.sin(state.clock.elapsedTime * 0.5) * 0.03
+    const targetY = spin.current + dr.x + extY
+    const targetX = dr.y + extX + Math.sin(state.clock.elapsedTime * 0.5) * 0.03
 
     group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, targetY, 6, d)
     group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, targetX, 6, d)
@@ -336,20 +299,21 @@ export default function PhoneModel({
         <planeGeometry args={[W - 0.032, H - 0.037]} />
         <meshBasicMaterial map={screenTex} toneMapped={false} transparent />
       </mesh>
-      {/* cover glass — reflective, slightly proud of the frame */}
-      <RoundedBox
-        args={[W - 0.012, H - 0.016, 0.012]}
-        radius={isAura ? 0.12 : 0.092}
-        smoothness={quality === 'low' ? 2 : 5}
-        position={[0, 0, D / 2 + 0.004]}
-      >
-        <meshPhysicalMaterial
-          transparent opacity={0.28} roughness={0.02} metalness={0}
-          transmission={0.55} thickness={0.06} ior={1.5}
-          clearcoat={1} clearcoatRoughness={0.02}
-          color="#ffffff" envMapIntensity={2}
+      {/* Cover glass. Deliberately NOT using transmission: it requires its own
+          render pass and occludes the emissive display behind it, which washed
+          the screen out to flat grey. A thin additive sheen reads as glass and
+          keeps the UI visible. */}
+      <mesh position={[0, 0, D / 2 + 0.007]} renderOrder={2}>
+        <planeGeometry args={[W - 0.03, H - 0.035]} />
+        <meshBasicMaterial
+          color="#9FC4FF"
+          transparent
+          opacity={0.05}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
         />
-      </RoundedBox>
+      </mesh>
 
       {/* ---- camera plateau (raised island) + modules ---- */}
       <group position={[-W / 2 + 0.3, H / 2 - 0.33, -D / 2]}>
