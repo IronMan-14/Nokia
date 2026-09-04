@@ -78,9 +78,9 @@ export default function PhoneScene({
           <pointLight position={[0, -3, 2]} intensity={12} color="#124191" distance={9} />
           <Suspense fallback={null}>
             <Float
-              speed={reduced ? 0 : 1.1}
-              rotationIntensity={reduced ? 0 : 0.12}
-              floatIntensity={reduced ? 0 : 0.35}
+              speed={reduced ? 0 : 0.8}
+              rotationIntensity={reduced ? 0 : 0.05}
+              floatIntensity={reduced ? 0 : 0.18}
             >
               <PhoneModel
                 variant={variant}

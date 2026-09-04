@@ -31,7 +31,15 @@ export default function App() {
   useEffect(() => {
     if (reduced || getDeviceTier() === 'low') return
     gsap.registerPlugin(ScrollTrigger)
-    const lenis = new Lenis({ duration: 1.1, smoothWheel: true, syncTouch: false })
+    // lerp (not duration) keeps the wheel 1:1 with a short settle, so the page
+    // stops when the user stops instead of gliding on with its own momentum.
+    const lenis = new Lenis({
+      lerp: 0.16,
+      wheelMultiplier: 1,
+      smoothWheel: true,
+      syncTouch: false,
+      touchMultiplier: 1.6,
+    })
     lenis.on('scroll', ScrollTrigger.update)
     const raf = (time) => lenis.raf(time * 1000)
     gsap.ticker.add(raf)
@@ -39,10 +47,10 @@ export default function App() {
     return () => { gsap.ticker.remove(raf); lenis.destroy() }
   }, [reduced])
 
-  const selectDevice = (id) => {
-    setDevice(id)
-    document.getElementById('hero')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' })
-  }
+  // Switch the 3D device in place. Previously this yanked the user back up to
+  // the hero, which read as the page scrolling on its own — the comparison
+  // cards now just swap the active device and stay put.
+  const selectDevice = (id) => setDevice(id)
 
   return (
     <div className="relative min-h-screen bg-base text-slate-300">

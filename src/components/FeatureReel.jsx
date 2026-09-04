@@ -35,9 +35,14 @@ function FeaturePinned({ device, finish }) {
       const st = ScrollTrigger.create({
         trigger: root.current,
         start: 'top top',
-        end: () => `+=${HOTSPOTS.length * 70}%`,
+        end: () => `+=${HOTSPOTS.length * 38}%`,
         pin: '.reel-stage',
-        scrub: 0.8,
+        pinSpacing: true,
+        anticipatePin: 1,
+        // scrub:true tracks the wheel exactly; a numeric scrub adds catch-up
+        // lag that feels like the page is dragging behind the user.
+        scrub: true,
+        invalidateOnRefresh: true,
         onUpdate: (self) => {
           const p = self.progress
           // camera/phone orbit driven purely by scroll progress
@@ -55,7 +60,7 @@ function FeaturePinned({ device, finish }) {
   const hs = HOTSPOTS[active]
 
   return (
-    <section id="features" ref={root} className="relative" style={{ height: `${100 + HOTSPOTS.length * 70}vh` }}>
+    <section id="features" ref={root} className="relative" style={{ height: `${100 + HOTSPOTS.length * 38}vh` }}>
       <div className="reel-stage relative h-[100svh] w-full overflow-hidden">
         <div aria-hidden className="circuit-bg absolute inset-0 opacity-60" />
 

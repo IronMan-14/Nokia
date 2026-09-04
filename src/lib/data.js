@@ -46,10 +46,10 @@ export const DEVICES = {
 }
 
 export const HOTSPOTS = [
-  { id: 'camera', label: 'PureView Tri-Camera', body: '50MP sensor-shift main, 3x periscope and a true-colour spectral sensor tuned by Nokia optics.', pos: [-0.42, 0.86, 0.13], side: 'left' },
-  { id: 'edge', label: 'Contour Edge Display', body: '6.5" LTPO panel curving into the frame, 1–144Hz adaptive, 2,600 nits peak.', pos: [0.5, 0.28, 0.09], side: 'right' },
-  { id: 'privacy', label: 'Hardware Privacy Key', body: 'A physical slider that severs power to mics, cameras and radios at the board level.', pos: [0.52, -0.24, 0.0], side: 'right' },
-  { id: 'frame', label: 'Recycled Aero Frame', body: '100% recycled aluminium, cold-forged and bead-blasted for grip without coatings.', pos: [-0.52, -0.7, 0.0], side: 'left' },
+  { id: 'camera', label: 'PureView Tri-Camera', body: '50MP sensor-shift main, 3x periscope and a true-colour spectral sensor tuned by Nokia optics.', pos: [-0.5, 0.74, -0.12], side: 'left' },
+  { id: 'edge', label: 'Contour Edge Display', body: '6.5" LTPO panel curving into the frame, 1–144Hz adaptive, 2,600 nits peak.', pos: [0.5, 0.3, 0.06], side: 'right' },
+  { id: 'privacy', label: 'Hardware Privacy Key', body: 'A physical slider that severs power to mics, cameras and radios at the board level.', pos: [0.51, -0.24, 0.0], side: 'right' },
+  { id: 'frame', label: 'Recycled Aero Frame', body: '100% recycled aluminium, cold-forged and bead-blasted for grip without coatings.', pos: [-0.5, -0.72, 0.0], side: 'left' },
 ]
 
 export const SPECS = [
