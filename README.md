@@ -64,3 +64,20 @@ from a CDN. To use a real HDRI, drop it in `public/` and swap in
 - Skip link, semantic table with scoped headers, `aria-live` form feedback, visible focus rings,
   and an `sr-only` text description of the ecosystem graph.
 - Mobile drops the pinned camera work entirely in favour of snap-scroll feature cards.
+
+## Deploying to GitHub Pages
+
+The site is published by `.github/workflows/deploy.yml` (build with Vite → upload
+artifact → `actions/deploy-pages`). It runs on pushes to `main` and to the working
+branch, and can be triggered manually from the Actions tab.
+
+**One-time setup:** in **Settings → Pages → Build and deployment**, set *Source* to
+**GitHub Actions**. The repo currently uses the legacy "deploy from a branch" source,
+which serves the raw repo root and cannot build a Vite app.
+
+`vite.config.js` sets `base` to `/Nokia/` so assets resolve under the project-pages
+sub-path. The workflow passes `BASE_PATH=/<repo-name>/` automatically, so a rename
+needs no code change. For a custom domain (served from the root), build with
+`BASE_PATH=/`.
+
+Live URL: https://ironman-14.github.io/Nokia/
