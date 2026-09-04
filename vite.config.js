@@ -6,8 +6,11 @@ import react from '@vitejs/plugin-react'
 // (e.g. BASE_PATH=/ for a custom domain or local `vite preview`).
 const base = process.env.BASE_PATH ?? '/Nokia/'
 
+const BUILD_ID = new Date().toISOString().slice(0, 16).replace('T', ' ')
+
 export default defineConfig({
   base,
+  define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
   plugins: [react()],
   server: { host: '0.0.0.0', port: 5173, allowedHosts: true },
   preview: { host: '0.0.0.0', port: 5173, allowedHosts: true },

@@ -1,8 +1,12 @@
 <!doctype html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- GitHub Pages serves index.html with a ~10min max-age. Because Vite
+         emits new hashed asset filenames on every build, a cached HTML points
+         at files that 404 and the page renders blank. Force revalidation. -->
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <title>Nokia Aura &amp; Terra — The Comeback, Reimagined (Concept)</title>
     <meta name="description" content="Concept illustration study: Nokia Aura and Nokia Terra. Not real announced products." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

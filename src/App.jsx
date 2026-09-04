@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import Lenis from '@studio-freight/lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Hero from './components/Hero.jsx'
@@ -27,25 +26,14 @@ export default function App() {
   // keep the finish valid when the device changes
   useEffect(() => { setFinish(DEVICES[device].finishes[0]) }, [device])
 
-  // Lenis smooth scroll, synced to GSAP ScrollTrigger. Disabled for reduced motion.
+  // No smooth-scroll library: the page scrolls natively so the wheel/trackpad
+  // maps 1:1 to the viewport and nothing animates the scroll position but the
+  // user. ScrollTrigger listens to native scroll directly.
   useEffect(() => {
-    if (reduced || getDeviceTier() === 'low') return
     gsap.registerPlugin(ScrollTrigger)
-    // lerp (not duration) keeps the wheel 1:1 with a short settle, so the page
-    // stops when the user stops instead of gliding on with its own momentum.
-    const lenis = new Lenis({
-      lerp: 0.16,
-      wheelMultiplier: 1,
-      smoothWheel: true,
-      syncTouch: false,
-      touchMultiplier: 1.6,
-    })
-    lenis.on('scroll', ScrollTrigger.update)
-    const raf = (time) => lenis.raf(time * 1000)
-    gsap.ticker.add(raf)
-    gsap.ticker.lagSmoothing(0)
-    return () => { gsap.ticker.remove(raf); lenis.destroy() }
-  }, [reduced])
+    ScrollTrigger.refresh()
+    console.info(`Nokia concept — build ${__BUILD_ID__}`)
+  }, [])
 
   // Switch the 3D device in place. Previously this yanked the user back up to
   // the hero, which read as the page scrolling on its own — the comparison
@@ -114,7 +102,10 @@ export default function App() {
             speculative devices created for a strategic case study. They are not real, announced or endorsed
             products, and all imagery is an artistic rendering. Nokia is a trademark of its respective owner.
           </p>
-          <p className="shrink-0">© {new Date().getFullYear()} Case study · Design fiction</p>
+          <p className="shrink-0">
+            © {new Date().getFullYear()} Case study · Design fiction
+            <span className="ml-2 opacity-40">build {__BUILD_ID__}</span>
+          </p>
         </div>
       </footer>
     </div>
